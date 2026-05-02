@@ -121,43 +121,12 @@ Rapidamente sobre mim: sou certificado em PHP pela Zend, tenho pós em Arquitetu
 
 ---
 
-# O Problema
-
-> Quem já debugou um problema que **não era no código**?
-
-- DNS não propagou
-- Timeout misterioso em produção
-- CORS bloqueando tudo no frontend
-- Certificado SSL expirado na sexta à noite
-- `$_SERVER['REMOTE_ADDR']` retornando IP errado
-
-<!--
-Levanta a mão quem já perdeu horas debugando algo que no final não era um bug no código. Era DNS, era timeout, era CORS, era certificado. Esses problemas são super comuns e acontecem justamente porque a gente como dev web muitas vezes não entende o que acontece na rede antes da requisição chegar no nosso código PHP. Hoje vamos mudar isso.
--->
-
----
-
 <!-- _class: lead -->
 
 # Fundamentos de Rede
 
 <!--
-Vamos começar pelo básico. O que é uma rede afinal?
--->
-
----
-
-# O que é uma rede?
-
-- Dispositivos conectados trocando dados seguindo **regras**
-- **LAN** - Rede local (sua casa, escritório, LAN House!)
-- **WAN** - Rede ampla (conecta LANs distantes)
-- **Internet** - A rede das redes
-
-> Lembra da LAN House? Aquilo era literalmente uma **Local Area Network** House
-
-<!--
-Uma rede é simplesmente dispositivos conectados trocando dados. Quando falamos de rede local, a LAN, é aquela rede do escritório, da sua casa. Quem lembra de LAN House? O nome vem literalmente de Local Area Network. Quando conectamos várias LANs distantes, temos uma WAN. E a Internet é a grande rede que conecta tudo isso. Como devs web, nosso código trafega por todas essas redes.
+Vamos começar pelos fundamentos: pacotes, métricas, camadas e protocolos.
 -->
 
 ---
@@ -219,13 +188,6 @@ A comunicação em rede é organizada em camadas. O modelo TCP/IP, que é o mais
 
 - **Regras** que definem como a comunicação funciona
 - Estrutura, formato, início, término, tratamento de erros
-
-```php
-// Nosso código já usa protocolos o tempo todo!
-echo $_SERVER['SERVER_PROTOCOL']; // "HTTP/1.1"
-echo $_SERVER['REQUEST_METHOD'];  // "GET"
-```
-
 - Todo protocolo **opera em alguma das camadas**
 - Cada camada possui seus próprios protocolos
 
@@ -335,18 +297,17 @@ Portas são números que identificam um serviço específico rodando em um dispo
 
 # Sockets
 
-- **Socket** = ponto final de um fluxo de dados na rede
-
-**IP Socket** (rede):
-- Combinação de **IP + porta** → `127.0.0.1:9000`
-- Comunicação entre máquinas (ou processos via rede)
+**Socket** = ponto final de um fluxo de dados na rede
 
 **Unix Socket** (local):
 - Comunicação via **arquivo** → `/var/run/php/php-fpm.sock`
 - Mais rápido que TCP (sem overhead de rede)
 
-> **Dica**: configure Nginx ↔ PHP-FPM via Unix Socket
-> em vez de `127.0.0.1:9000` pra melhor performance
+**IP Socket** (rede):
+- Combinação de **IP + porta** → `127.0.0.1:9000`
+- Comunicação entre máquinas (ou processos via rede)
+
+> **Dica**: configure Nginx ↔ PHP-FPM via Unix Socket ao invés de `127.0.0.1:9000` pra melhor performance
 
 <!--
 Um socket é o ponto final de um fluxo de dados. Temos dois tipos: IP Sockets, que são a combinação de IP com porta usada pra comunicação em rede, e Unix Sockets, que usam um arquivo no sistema pra comunicação entre processos na mesma máquina. O Unix Socket é mais rápido porque não tem o overhead do protocolo TCP. É muito comum e recomendado configurar Nginx e PHP-FPM se comunicando via Unix Socket em vez de TCP na porta 9000. A diferença de performance é mensurável, especialmente sob alta carga.
@@ -520,26 +481,17 @@ O PHP tem funções nativas pra consultar DNS. A dns_get_record retorna os regis
 
 ---
 
-# SSH - Secure Shell
+# Outros protocolos da camada de aplicação
 
-- Acesso remoto **seguro** (porta 22)
-- Autenticação por **chave pública/privada**
-
-```shell
-# Port forwarding: acessar banco remoto com segurança
-ssh -L 3306:db-server:3306 usuario@proxy
-
-# Agora conecte no localhost:3306 como se fosse local!
-```
-
-- **Dica**: configure `~/.ssh/config` pra facilitar a vida
-
-**Outros protocolos da camada de aplicação:**
-- FTP (nostalgia do FileZilla! 😅) → SFTP
-- SMTP (587) / IMAP (993) → PHPMailer, Symfony Mailer
+- **SSH** (22) — acesso remoto seguro a servidores; chaves pública/privada
+- **FTP** (20/21) — transferência de arquivos (sem criptografia)
+- **SFTP** (22) — FTP sobre SSH; criptografado
+- **SMTP** (587) — envio de e-mails
+- **POP3** (995) — recebimento; baixa e remove do servidor
+- **IMAP** (993) — recebimento; mantém tudo sincronizado no servidor
 
 <!--
-SSH é como a maioria de nós acessa servidores. Usa criptografia de chave pública/privada. Um recurso muito útil é o port forwarding: você cria um túnel seguro pra acessar um banco de dados remoto como se fosse local. Por exemplo, se o MySQL está numa rede privada, você faz SSH com port forwarding e conecta no localhost:3306. Sobre outros protocolos: quem lembra de fazer deploy por FTP com FileZilla? Bons tempos... hoje usamos SFTP que é criptografado. Pra e-mail temos SMTP pra enviar e IMAP pra receber, e em PHP usamos PHPMailer ou Symfony Mailer.
+Além de DNS e HTTP, que são os protocolos que mais nos interessam como devs web, a camada de aplicação tem outros que vale conhecer. SSH é como a maioria de nós acessa servidores remotos — usa criptografia de chave pública/privada e roda na porta 22. FTP é o protocolo clássico de transferência de arquivos, sem criptografia, lembra do deploy direto via FileZilla? Hoje em dia usamos SFTP, que é FTP sobre SSH, então a comunicação é criptografada. Pra e-mail temos três protocolos: SMTP pra envio, e POP3 ou IMAP pra recebimento. A diferença entre POP3 e IMAP é que o POP3 baixa as mensagens e tira do servidor, enquanto o IMAP mantém tudo sincronizado no servidor — por isso aplicações modernas usam IMAP. Em PHP, pra mexer com e-mail a gente normalmente usa PHPMailer ou Symfony Mailer.
 -->
 
 ---
@@ -657,19 +609,6 @@ Antes de falar dos métodos do HTTP, vale dar um passo atrás e pensar em como a
 
 <!--
 Os métodos HTTP definem a intenção da requisição. GET pra buscar, POST pra criar, PUT pra substituir completamente, PATCH pra atualizar parcialmente, DELETE pra remover. O OPTIONS é usado pelo CORS pra verificar permissões, vamos falar disso já já. Cada método se enquadra ou não em três categorias: seguro, idempotente e cacheável. Seguro, ou safe, é aquele método que é essencialmente read-only — o cliente não pede mudança de estado. GET, HEAD e OPTIONS são safe. Idempotente é quando uma requisição feita uma vez ou várias vezes produz o mesmo efeito no servidor. Todo método safe é idempotente, e além deles PUT e DELETE também são. Cacheável diz se um mecanismo de cache pode armazenar a resposta. GET e HEAD são cacheáveis por padrão. POST e PATCH são "condicionais" — só são cacheáveis se a resposta vier com headers específicos de freshness e Content-Location. Sobre o asterisco no PATCH: por definição da RFC, PATCH não é idempotente, igual o POST. Mas, na prática, dependendo de como a aplicação implementa, ele pode ser. Isso não torna o método idempotente, só aquela implementação dele.
--->
-
----
-
-# Métodos e Idempotência
-
-- **Idempotente**: mesma requisição N vezes = mesmo efeito
-  - GET, PUT, DELETE → seguros pra retry automático
-- **Não idempotente**: cada chamada pode ter efeito diferente
-  - POST → cada chamada pode criar um novo recurso
-
-<!--
-Idempotência é um conceito importante. Se eu faço o mesmo GET 10 vezes, o resultado é o mesmo. Se faço o mesmo DELETE 10 vezes, o efeito é o mesmo: o recurso já foi deletado na primeira vez. Mas POST não é idempotente: cada chamada pode criar um novo recurso. Isso é relevante pra retry: se uma requisição PUT falha por timeout, posso reenviar sem medo. Com POST, preciso de mais cuidado pra evitar duplicação. Muitos gateways e proxies usam essa informação pra decidir se podem retentar automaticamente.
 -->
 
 ---
@@ -1108,18 +1047,35 @@ Vamos juntar tudo. Quando alguém acessa sua aplicação: primeiro o navegador r
 
 ---
 
-# Dicas Práticas
+# Referências — Livro e links
 
-- Adicione headers **HSTS**, **CSP** e **CORS**
-- Use **cache HTTP** + **CDN** pra assets e respostas
-- Retorne **status codes corretos** (não 200 pra tudo!)
-- Mantenha respostas críticas **< 14KB** comprimidas
-- **Compressão** (Brotli > gzip) no Nginx/Apache
-- **HTTP/2** no mínimo (HTTP/3 se CDN suportar)
-- Unix Sockets pra **Nginx ↔ PHP-FPM**
+📘 **Livro**: [*Introdução a Redes para Desenvolvedores Web*](https://leanpub.com/redes-dev-web/)
+
+✍️ **Posts no blog [dias.dev](https://dias.dev)**:
+- [Cookies e segurança](https://dias.dev/2022-09-27-cookies-e-seguranca/)
+- [Requisições HTTP paralelas com PHP](https://dias.dev/2021-03-13-requisicoes-http-paralelas-com-php/)
+
+🔗 [Por que seu site deveria ter menos de 14kB](https://endtimes.dev/why-your-website-should-be-under-14kb-in-size/)
 
 <!--
-Pra fechar, algumas dicas práticas. Configure trusted proxies pra ter o IP real do cliente. Adicione headers de segurança: HSTS, CSP, CORS. Use cache HTTP e CDN. Retorne status codes corretos: nada de retornar 200 com JSON de erro! Otimize respostas pra caber nos 14KB quando possível. Habilite compressão, preferencialmente Brotli. Use HTTP/2 no mínimo. E configure Nginx e PHP-FPM pra se comunicar via Unix Socket, que é mais rápido que TCP na porta 9000.
+Antes de encerrar, deixo aqui as referências pra quem quiser se aprofundar. Primeiro o livro, que está no Leanpub. No blog tem posts complementares sobre cookies e segurança e sobre como fazer várias requisições HTTP em paralelo com PHP. E pra quem ficou curioso sobre a história dos 14kB, esse último link é o artigo original em inglês.
+-->
+
+---
+
+# Referências — Vídeos no canal [@DiasDeDev](https://youtube.com/@DiasDeDev)
+
+- [Como funciona a Web? — a internet por baixo dos panos](https://www.youtube.com/watch?v=B2IWlnJ_dt0)
+- [Sockets de rede — como funciona a comunicação na Web](https://www.youtube.com/watch?v=qel4jIrh7Z0)
+- [Firewalls — o mínimo que todo dev deve saber](https://www.youtube.com/watch?v=w-wKctaMGpU)
+- [O que é CORS — resolvendo o erro `Access-Control-Allow-Origin`](https://www.youtube.com/watch?v=Fha6Il-5RYE)
+- [Clickjacking — conhecendo e evitando esse ataque (CSP)](https://www.youtube.com/watch?v=xUgCMMVZ2_A)
+- [Como usar Cache HTTP — performance na Web](https://www.youtube.com/watch?v=IrwIYywpvbM)
+- [CDN: o que é e por que você PRECISA de uma](https://www.youtube.com/watch?v=2geXZqSeulA)
+- [Swoole PHP: criando um servidor de WebSocket](https://www.youtube.com/watch?v=GCECSLtT49U)
+
+<!--
+E no canal do YouTube tenho vídeos cobrindo praticamente cada um dos tópicos que vimos hoje: fundamentos da web, sockets, firewalls, CORS, clickjacking com CSP, cache HTTP, CDN e WebSocket com Swoole.
 -->
 
 ---
