@@ -754,26 +754,43 @@ Existem headers HTTP que são fundamentais pra segurança. O HSTS diz pro navega
 
 # CORS na Prática
 
-**Requisição simples** (GET, HEAD, POST com form):
-```
-Origin: https://meu-frontend.com
-→ Access-Control-Allow-Origin: https://meu-frontend.com
+> Erro no console? A própria mensagem **diz o fix**: adicionar `Access-Control-Allow-Origin` na resposta do servidor
+
+**Simple request** — método e `Content-Type` "de formulário", sem headers exóticos:
+
+```http
+→ GET /api/users    Origin: https://front.com
+← 200 OK            Access-Control-Allow-Origin: https://front.com
 ```
 
-**Requisição complexa** (JSON, PUT, DELETE, headers custom):
-```
-1. OPTIONS /api/users  ← Preflight
-   Origin: https://meu-frontend.com
-   Access-Control-Request-Method: DELETE
-
-2. Access-Control-Allow-Origin: https://meu-frontend.com
-   Access-Control-Allow-Methods: GET, POST, DELETE
-
-3. DELETE /api/users/1  ← Requisição real
-```
+- CORS é **decisão do navegador** — `curl` ignora, a requisição até "funciona"
 
 <!--
-CORS é o terror de quem trabalha com frontend separado do backend. Existem dois tipos de requisição: simples e complexa. As simples, como GET e POST com formulário, só precisam que o servidor responda com o header Allow-Origin. As complexas, que usam JSON, métodos como PUT e DELETE, ou headers customizados, disparam um preflight: o navegador manda um OPTIONS antes da requisição real pra verificar se o servidor permite. No Laravel, o CORS é configurado no arquivo config/cors.php. Se vocês já viram aquele erro de CORS no console, provavelmente é o preflight sendo rejeitado.
+CORS é o terror de quem trabalha com frontend separado do backend, mas a boa notícia é que a própria mensagem de erro no console já instrui a correção: adicionar o cabeçalho Access-Control-Allow-Origin na resposta do servidor. Um detalhe importante antes de tudo: CORS é uma decisão do navegador, não do servidor. O servidor só responde com cabeçalhos; quem bloqueia o JavaScript de acessar a resposta é o browser. Por isso o curl ou um cliente HTTP de backend ignora CORS completamente — a requisição vai e a resposta volta normalmente. As regras: uma "simple request" é aquela que usa GET, HEAD ou POST com Content-Type de formulário, ou seja, application/x-www-form-urlencoded, multipart/form-data ou text/plain. E sem cabeçalhos custom além de uns poucos permitidos. Cuidado com o engano clássico: POST com Content-Type application/json NÃO é simple request, ele dispara preflight — vamos ver isso no próximo slide.
+-->
+
+---
+
+# CORS: preflight
+
+**Qualquer outra coisa** (JSON, `PUT`/`DELETE`, `Authorization`, headers `X-*`...) → *preflight*:
+
+```http
+→ OPTIONS /api/users    Origin: https://front.com
+                        Access-Control-Request-Method: DELETE
+                        Access-Control-Request-Headers: Authorization
+
+← 204 No Content        Access-Control-Allow-Origin: https://front.com
+                        Access-Control-Allow-Methods: GET, POST, DELETE
+                        Access-Control-Allow-Headers: Authorization
+
+→ DELETE /api/users/1   ← só agora a requisição real
+```
+
+- No Laravel: `config/cors.php` (trusted origins, methods, headers)
+
+<!--
+Quando a requisição não é simple, o navegador faz primeiro um OPTIONS pro mesmo endereço, mandando Origin, o método pretendido no Access-Control-Request-Method, e os headers que vai querer enviar no Access-Control-Request-Headers. O servidor responde com Access-Control-Allow-Origin, Allow-Methods e Allow-Headers, dizendo o que é permitido. Só depois dessa "conversa preliminar" o navegador faz a requisição real. Por isso o método OPTIONS é safe e idempotente: ele só pergunta, não causa efeito colateral. No Laravel, tudo isso é configurado no arquivo config/cors.php — define quais origens, métodos e headers são permitidos, e o framework cuida de responder o preflight automaticamente. Se vocês já viram aquele erro de CORS no console, provavelmente é o preflight sendo rejeitado.
 -->
 
 ---
@@ -1158,6 +1175,12 @@ E no canal do YouTube tenho vídeos cobrindo praticamente cada um dos tópicos q
 
 # Perguntas?
 
+<div style="display: flex; justify-content: center; align-items: center;">
+
+![h:360](qr-code.jpg)
+
+</div>
+
 <!--
-Chegamos ao fim! Vou mostrar o livro e abrir pra perguntas.
+Chegamos ao fim! Esse QR Code leva pro livro — aponta a câmera do celular e você já cai na página dele. Vou abrir pra perguntas.
 -->
