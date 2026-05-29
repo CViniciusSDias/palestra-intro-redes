@@ -399,6 +399,20 @@ Antes de comparar TCP e UDP numa tabela, vale ver isso funcionando ao vivo. A ge
 
 ---
 
+# TCP vs UDP no tcpdump
+
+<div style="display: flex; justify-content: center; align-items: center;">
+
+<video src="tcp-udp.webm" controls height="480"></video>
+
+</div>
+
+<!--
+Aqui está a gravação do que acabamos de descrever. Reparem na diferença: na parte do TCP, antes da primeira mensagem aparecer, já tem os 3 pacotes do handshake — SYN, SYN+ACK, ACK. Cada mensagem trocada vem acompanhada de um ACK. E quando fecho a conexão, mais pacotes de encerramento. Já na parte do UDP, vocês vão ver que só aparece o pacote da mensagem em si. Sem cerimônia nenhuma: o cliente manda, o servidor recebe, e pronto. É a diferença entre os dois protocolos visível no tcpdump.
+-->
+
+---
+
 # TCP vs UDP
 
 <div style="display: flex; justify-content: center;">
@@ -454,9 +468,7 @@ DNS é o sistema que traduz nomes de domínio em IPs. Quando você digita um sit
 
 ---
 
-# DNS na Prática PHP
-
-**Tipos de registro:**
+# DNS - Tipos de registro:
 
 <div style="display: flex; justify-content: center;">
 
@@ -470,6 +482,8 @@ DNS é o sistema que traduz nomes de domínio em IPs. Quando você digita um sit
 
 </div>
 
+**PHP:**
+
 ```php
 $records = dns_get_record('example.com', DNS_A);
 // [['ip' => '93.184.216.34', 'ttl' => 3600, ...]]
@@ -477,6 +491,24 @@ $records = dns_get_record('example.com', DNS_A);
 
 <!--
 O PHP tem funções nativas pra consultar DNS. A dns_get_record retorna os registros de um domínio. Os tipos mais importantes: A é o registro principal que mapeia pra IPv4, AAAA pra IPv6, CNAME é um alias (o famoso www apontando pro domínio raiz), MX é pra servidores de e-mail, e TXT é usado pra verificação de domínio, SPF, DKIM. Quando vocês configuram e-mail no domínio, estão mexendo com registros MX e TXT.
+-->
+
+---
+
+# DNS na prática:
+
+```shell
+$ dig +trace dias.dev AAAA
+```
+
+<div style="display: flex; justify-content: center; align-items: center;">
+
+<video src="dns.webm" controls height="420"></video>
+
+</div>
+
+<!--
+Pra ver a hierarquia do DNS funcionando na prática, dá pra usar o dig com a opção +trace. Em vez de perguntar pro resolver local e receber só a resposta final, o dig vai consultar cada nível da hierarquia e mostrar cada passo. Aqui estou consultando o registro AAAA do dias.dev, que é o IPv6. Reparem na gravação: o primeiro bloco da saída são os root servers — aqueles 13 servidores raiz da internet. Eles não sabem o IP do dias.dev, mas sabem quem cuida do .dev, então respondem com os servidores do TLD. O segundo bloco é a consulta nos servidores do .dev, que respondem com os servidores autoritativos do dias.dev. E o último bloco é a consulta no servidor autoritativo, que finalmente responde com o registro AAAA. É exatamente a hierarquia que descrevemos no slide anterior, agora visível.
 -->
 
 ---
@@ -564,6 +596,20 @@ Set-Cookie: PHPSESSID=abc123; Path=/; HttpOnly; Secure
 
 <!--
 A resposta segue a mesma estrutura. A primeira linha traz a versão, o código de status (200 aqui), e uma frase descritiva. Depois os headers de resposta, incluindo Content-Type, configurações de cache, cookies. E por fim o corpo com o conteúdo. Reparem no PHPSESSID no Set-Cookie: é o identificador de sessão do PHP. Quando chamamos session_start(), o PHP automaticamente envia esse cookie.
+-->
+
+---
+
+# HTTP na prática
+
+<div style="display: flex; justify-content: center; align-items: center;">
+
+<video src="http.webm" controls height="480"></video>
+
+</div>
+
+<!--
+Antes de ver o formato da resposta, vale acompanhar uma troca HTTP real acontecendo. Reparem na requisição: a linha de método, caminho e versão, depois os cabeçalhos, e o corpo se houver. E na resposta: a linha de status com o código, os cabeçalhos da resposta, e o corpo. É exatamente a estrutura que descrevemos no slide anterior, agora visível em uma comunicação real.
 -->
 
 ---
@@ -802,6 +848,20 @@ Compressão reduz drasticamente o tamanho das respostas HTTP. O cliente envia Ac
 
 ---
 
+# Compressão na prática
+
+<div style="display: flex; justify-content: center; align-items: center;">
+
+<video src="compressao.webm" controls height="480"></video>
+
+</div>
+
+<!--
+Pra ver a compressão funcionando na prática, fiz uma requisição enviando o cabeçalho Accept-Encoding com gzip. Reparem na resposta: o servidor devolveu o Content-Encoding: gzip, e o corpo veio em binário comprimido — não dá pra ler com os olhos, justamente porque está comprimido. Quando o navegador recebe isso, ele descomprime automaticamente antes de processar. É essa troca que economiza banda e ajuda o HTML inicial a caber no primeiro segmento TCP.
+-->
+
+---
+
 # HTTPS e TLS
 
 - **HTTPS** = HTTP + **TLS** (camada de criptografia)
@@ -876,6 +936,20 @@ A saída traz: emissor, titular, validade, algoritmo, **chave pública** e a ass
 
 <!--
 Pra fechar a parte de certificados, vale ver na prática como olhar pra um certificado raiz no seu sistema. Em Linux, os certificados raiz que o SO confia ficam em /etc/ssl/certs. Você pode listar com ls e filtrar pela autoridade — aqui filtrei por ISRG, que é a Internet Security Research Group, organização por trás do Let's Encrypt. Pra ver o conteúdo do certificado, usa o openssl x509 com -text e -noout. A saída vai mostrar quem é o emissor, pra quem foi emitido, validade, algoritmo de criptografia, a chave pública em si e a assinatura. O ponto importante é que esses são exatamente os certificados em quem seu sistema confia por padrão, sem perguntar nada. Quando o navegador valida um certificado de site, ele tá checando se a cadeia de assinaturas chega em algum desses arquivos aqui.
+-->
+
+---
+
+# Certificado raiz: ISRG Root X1
+
+<div style="display: flex; justify-content: center; align-items: center;">
+
+![h:480](certificado.png)
+
+</div>
+
+<!--
+Essa é a saída do comando openssl x509 mostrando o certificado raiz da Let's Encrypt, o ISRG Root X1. Reparem nos campos: a versão do certificado, o número de série, o algoritmo de assinatura — sha256 com RSA. O Issuer e o Subject são iguais nesse caso, porque é um certificado raiz, ou seja, autoassinado. A validade vai de 2015 até 2035. E aí embaixo está a chave pública RSA de 4096 bits, com o modulus exibido em hexadecimal. É exatamente esse arquivo, instalado no seu sistema, que ancora a confiança em qualquer certificado emitido pela Let's Encrypt.
 -->
 
 ---
